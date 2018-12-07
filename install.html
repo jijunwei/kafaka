@@ -1,0 +1,79 @@
+kafka的环境安装
+1，文件准备
+将下载下来的Kafka的配置文件进行解压
+在linux上输入:
+1	tar  -xvf   kafka_2.12-1.0.0.tgz
+然后移动到/opt/kafka里面，没有就新建，然后将文件夹重命名为kafka2.12
+输入
+1
+2	mv  kafka_2.12-1.0.0  /opt/kafka
+ mv  kafka_2.12-1.0.0  kafka2.12
+2，环境配置
+编辑 /etc/profile 文件
+输入:
+1
+2	export  KAFKA_HOME=/opt/kafka/kafka2.12 
+export PATH=.:${JAVA_HOME}/bin:${KAFKA_HOME}/bin:${ZK_HOME}/bin:$PATH
+输入:
+1	source  /etc/profile
+使配置生效
+3，修改配置文件
+注:其实要说的话，如果是单机的话，kafka的配置文件可以不用修改，直接到bin目录下启动就可以了。但是我们这里是集群，所以稍微改下就可以了。
+切换到kafka/config 目录下
+编辑server.properties 文件
+需要更改的是Zookeeper的地址:
+找到Zookeeper的配置，指定Zookeeper集群的地址，设置如下修改就可以了
+1
+2	zookeeper.connect=master:2181,slave1:2181,slave2:2181
+zookeeper.connection.timeout.ms=6000
+其它可以选择更改的有
+1 ，num.partitions 表示指定的分区，默认为1
+2，log.dirs kafka的日志路径，这个按照个人需求更改就行
+3, broker.id:非负整数，用于唯一标识broker，每台不一样
+…
+注:还有其它的配置，可以查看官方文档，如果没有特别要求，使用默认的就可以了。
+配置好之后，记得使用scp 命令传输到其它的集群上，记得更改server.properties 文件！
+4，启动kafka
+集群每台集群都需要操作！
+切换到kafka/bin 目录下
+输入:
+1	kafka-server-start.sh
+然后输入jps名称查看是否成功启动:
+
+成功启动之后，可以进行简单的测试下
+首先创建个topic
+输入:
+1	kafka-topics.sh --zookeeper master:2181 --create --topic t_test --partitions 5  --replication-factor 2
+说明: 这里是创建了一个名为 t_test 的topic，并且指定了5个分区，每个分区指定了2个副本数。如果不指定分区，默认的分区就是配置文件配置的。
+然后进行生产数据
+输入:
+1	kafka-console-producer.sh --broker-list master:9092 --topic t_test
+可以使用进行Ctrl+D 退出
+然后我们再打开一个xshell窗口
+进行消费
+输入:
+1	kafka-console-consumer.sh  --zookeeper master:2181  --topic t_test --from-beginning
+
+可以使用进行Ctrl+C 退出
+可以看到数据已经正常消费了。
+5，kafka的一些常用命令
+1.启动和关闭kafka
+1
+2	bin/kafka-server-start.sh config/server.properties >>/dev/null 2>&1 &
+bin/kafka-server-stop.sh
+2.查看kafka集群中的消息队列和具体队列
+查看集群所有的topic
+1	kafka-topics.sh --zookeeper master:2181,slave1:2181,slave2:2181 --list
+查看一个topic的信息
+1	kafka-topics.sh --zookeeper master:2181 --describe --topic t_test
+3.创建Topic
+1	kafka-topics.sh --zookeeper master:2181 --create --topic t_test --partitions 5  --replication-factor 2
+4.生产数据和消费数据
+1	kafka-console-producer.sh --broker-list master:9092 --topic t_test
+Ctrl+D 退出
+1	kafka-console-consumer.sh  --zookeeper master:2181  --topic t_test --from-beginning
+Ctrl+C 退出
+5.kafka的删除命令
+1	kafka-topics.sh --delete --zookeeper master:2181 --topic t_test
+6,添加分区
+1	kafka-topics.sh --alter --topict_test --zookeeper master:2181 --partitions 10
